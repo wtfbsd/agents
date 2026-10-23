@@ -1,0 +1,26 @@
+# examplebsd-answers.yaml — the documentation placeholder distribution
+# (AGENTS.md uses ExampleBSD as the placeholder everywhere).
+#
+# Copyright (c) 2026 The wtfbsd contributors. BSD-2-Clause (see LICENSE).
+#
+# This one exercises FreeBSD with a ZFS root + optional ZFS data pool, a
+# desktop profile and the GUI installer — the widest config the templates
+# support. Format: flat `KEY: value` lines; see questions.yaml
+# for the full rules and questions.yaml for the ids.
+
+DISTRO_OS: freebsd
+DISTRO_NAME: ExampleBSD
+DISTRO_SLUG: examplebsd
+DISTRO_ARCH: amd64
+FILESYSTEM_ROOT: zfs
+ZFS_DATA_POOL: no
+PROFILE: desktop
+PACKAGE_SET: base-desktop
+INSTALLER: gui
+MOTD: ExampleBSD — the placeholder distribution of the wtfbsd templates
+BRAND_COLOR: 3b6ea5
+BRAND_URL: https://wtfbsd.ai
+CI_ENABLED: yes
+PUBLISH_METHOD: mcp
+PUBLISH_TARGET: wtfbsd.ai
+PUBLISHER_ORG: wtfbsd

@@ -1,0 +1,32 @@
+# examplebsd-netbsd-answers.yaml — the worked example from AGENTS.md and docs/E2E.md:
+#   "make me NetBSD with ZFS" (ExampleBSD, NetBSD flavour)
+#
+# Copyright (c) 2026 The wtfbsd contributors. BSD-2-Clause (see LICENSE).
+#
+# Format: one flat `KEY: value` line per answered question (see questions.yaml
+# and scripts/apply-answers.sh). Values must not contain "|", an inner double
+# quote (one outer wrapping pair is allowed), a backslash or control
+# characters. Keys are exactly the question ids in questions.yaml.
+#
+# Honesty note: NetBSD cannot boot from ZFS. The realistic
+# reading of the wish is therefore FILESYSTEM_ROOT=ffs (root) plus a ZFS data pool
+# (ZFS_DATA_POOL=yes) — exactly what this file answers. scripts/
+# apply-answers.sh enforces that and warns about the data-only ZFS row.
+
+DISTRO_OS: netbsd
+DISTRO_NAME: ExampleBSD
+DISTRO_SLUG: examplebsd
+DISTRO_ARCH: amd64
+FILESYSTEM_ROOT: ffs
+ZFS_DATA_POOL: yes
+ZFS_POOL_NAME: exampledata
+PROFILE: appliance
+PACKAGE_SET: base-server
+INSTALLER: tui
+MOTD: ExampleBSD — a small NetBSD distribution with a ZFS data pool
+BRAND_COLOR: 2e7d66
+BRAND_URL: https://wtfbsd.ai
+CI_ENABLED: yes
+PUBLISH_METHOD: api
+PUBLISH_TARGET: wtfbsd.ai
+PUBLISHER_ORG: wtfbsd

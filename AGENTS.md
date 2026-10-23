@@ -54,6 +54,14 @@ disagree, the tables win.
 - **Three overlay layers on every base-OS template**: `overlay/base` (common to
   every product), `overlay/profiles/desktop` and `overlay/profiles/appliance`.
   What gets built on top of base is decided by the `PROFILE` answer.
+- **Desktop profile is X11-only, Xfce, fixed.** No Wayland for now. The
+  desktop is Xfce on Xorg with the LightDM greeter; where LightDM is not
+  available on a base OS, use that OS's native xdm or slim instead. There is
+  no desktop-environment or display-server question: never offer Wayland,
+  GNOME, KDE or another DE.
+- **Generic branding only.** All artwork, wallpapers, boot and greeter
+  branding in the templates is generic "ExampleBSD"; products replace it in
+  their own overlay.
 - **One worked ExampleBSD per base OS** (freebsd, netbsd, openbsd, dragonfly,
   illumos) exists as reference. When unsure how a finished product should look —
   the shape of `answers.yaml`, `product.conf`, an overlay, or a green Jenkins
@@ -126,7 +134,8 @@ packages; **illumos** illumos-gate plus an OmniOS-style distro builder with IPS
      names `<slug>`, `<slug>-ports`, `<slug>-installer`, `<slug>-ci`.
      Placeholder: examplebsd.
 3. **Q3 — `DISTRO_ARCH`** (choice). amd64 or aarch64. Default: first `arch`
-   entry of the OS row (amd64 for every row today). DragonFly and illumos rows
+   entry of the OS row (amd64 for every row today); the fixed
+   fallback default is amd64. DragonFly and illumos rows
    are amd64 only — do not offer aarch64 there even though the question lists it.
 4. **Q4 — the filesystem step** (ids in file order: `FILESYSTEM_ROOT`,
    `ZFS_DATA_POOL`, `ZFS_POOL_NAME`).
@@ -147,6 +156,8 @@ packages; **illumos** illumos-gate plus an OmniOS-style distro builder with IPS
 5. **Q5 — `PROFILE`** (choice: desktop, appliance, both; default appliance).
    Selects `overlay/profiles/desktop` and/or `overlay/profiles/appliance` on top
    of `overlay/base`, and with it which Jenkins builds and bhyve tests run.
+   The desktop path is fixed: Xfce on X11 (Xorg) with LightDM, or the OS's
+   native xdm or slim where LightDM is unavailable. No Wayland, no DE choice.
 6. **Q6 — `PACKAGE_SET`** (choice: minimal, base-server, base-desktop, custom;
    default minimal). `custom` means: edit the package list in the product repo
    after forking; the templates install minimal plus whatever the product repo
@@ -159,8 +170,8 @@ packages; **illumos** illumos-gate plus an OmniOS-style distro builder with IPS
    `BRAND_URL`).
    - `MOTD`: one printable line, no control characters, at most 120 characters.
      Default: `built from the wtfbsd templates`.
-   - `BRAND_COLOR`: accent color `#RRGGBB` — `^#[0-9a-fA-F]+$`, exactly 7
-     characters. Default: `#3b6ea5`.
+   - `BRAND_COLOR`: accent color as exactly 6 hex digits, stored without the
+     leading `#` (`RRGGBB`, e.g. `3b6ea5`; templates prepend `#`). Default: `3b6ea5`.
    - `BRAND_URL`: `^https://[A-Za-z0-9.-]+$`, at most 200 characters — the
      pattern makes https mandatory. Default: `https://wtfbsd.ai`. Shown in
      installer footers and on the release page.
@@ -208,7 +219,7 @@ When Q10 is answered:
    PACKAGE_SET: minimal
    INSTALLER: tui
    MOTD: built from the wtfbsd templates
-   BRAND_COLOR: "#3b6ea5"
+   BRAND_COLOR: 3b6ea5
    BRAND_URL: https://example.org
    CI_ENABLED: yes
    PUBLISH_METHOD: api
@@ -296,7 +307,7 @@ A second throwaway VM proves the release actually installs. Per release build:
 3. Judge each path chosen by `PROFILE`:
    - **desktop** (or `both`): the VM's bhyve fbuf framebuffer serves VNC on a
      host-local address; take a screenshot with a VNC client and pass only when
-     the graphical greeter is visible.
+     the X11 login greeter (LightDM, or xdm/slim) is visible.
    - **appliance** (or `both`): on the serial console (`vm console`) a login
      prompt must appear, and an SSH login with the per-run test key must work:
 

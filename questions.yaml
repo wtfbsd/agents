@@ -129,7 +129,8 @@ questions:
     prompt: "Which architecture should the release be built for?"
     type: choice
     choices: [amd64, aarch64]
-    notes: "Per-OS limits live in per_os rows: DragonFly and illumos are amd64 only. Default: first column of the OS row (amd64)."
+    default: amd64
+    notes: "Per-OS limits live in per_os rows: DragonFly and illumos are amd64 only. Default: first column of the OS row; the fixed fallback default is amd64."
 
   - id: FILESYSTEM_ROOT
     number: 4
@@ -162,7 +163,7 @@ questions:
     type: choice
     choices: [desktop, appliance, both]
     default: appliance
-    notes: "Selects overlay/profiles/desktop and/or overlay/profiles/appliance on top of overlay/base. Jenkins builds and bhyve-tests each chosen path: desktop boots to a graphical greeter (VNC screenshot), appliance reaches a serial login prompt and accepts SSH."
+    notes: "Selects overlay/profiles/desktop and/or overlay/profiles/appliance on top of overlay/base. Jenkins builds and bhyve-tests each chosen path: desktop is fixed to Xfce on X11 (Xorg) with LightDM, or native xdm or slim where LightDM is unavailable; no Wayland and no DE choice; it boots to that greeter (VNC screenshot), appliance reaches a serial login prompt and accepts SSH."
 
   - id: PACKAGE_SET
     number: 6
@@ -190,13 +191,13 @@ questions:
 
   - id: BRAND_COLOR
     number: 8
-    prompt: "Brand accent color, as a six-digit hex like #RRGGBB?"
+    prompt: "Brand accent color, as six hex digits without the leading hash (RRGGBB)?"
     type: string
-    pattern: "^#[0-9a-fA-F]+$"
-    min: 7
-    max: 7
-    default: "#3b6ea5"
-    notes: "Public placeholder color for documentation; pick anything you own."
+    pattern: "^[0-9a-fA-F]+$"
+    min: 6
+    max: 6
+    default: 3b6ea5
+    notes: "Stored without the hash so it stays inside the YAML subset; templates prepend it. Exactly 6 hex digits (pattern plus min/max 6). Public placeholder color; pick anything you own."
 
   - id: BRAND_URL
     number: 8

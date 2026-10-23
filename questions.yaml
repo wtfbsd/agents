@@ -1,0 +1,244 @@
+# questions.yaml — the machine-readable Q&A contract for wtfbsd/agents.
+#
+# Copyright (c) 2026 The wtfbsd contributors. BSD-2-Clause (see LICENSE).
+#
+# This file is the contract between three documents:
+#
+#   1. AGENTS.md                  — how an agent asks the user the questions
+#   2. answers.yaml (examples/)   — what the user answered
+#   3. scripts/apply-answers.sh   — validates answers and emits product.conf
+#
+# The question ids here are exactly the answers.yaml keys and exactly the
+# product.conf keys. The "number" field is the numbered question in AGENTS.md
+# Phase 1. Do not change ids once product.conf files exist downstream.
+#
+# THE "wtfbsd YAML SUBSET"
+# ========================
+# scripts/apply-answers.sh parses this file and answers.yaml with a small,
+# strict reader. Everything must stay inside this subset:
+#
+#   - whole-line comments (# ...) and blank lines
+#   - top-level sections: a bare `name:` line
+#   - `key: value` scalars (value ends at end-of-line)
+#   - inline lists: [a, b, c]           (closed on the same line)
+#   - per_os rows: one single-line dict:   - { os: <name>, ... }
+#   - question items: `- id: SOME_KEY` followed by indented fields
+#
+# No block scalars (| or >), no anchors/aliases, no multi-line strings, no
+# tabs, no quoting inside { ... } rows, and no "#" characters inside values.
+# If you extend the shape, extend scripts/apply-answers.sh in the same change.
+
+version: 1
+
+# ---------------------------------------------------------------------------
+# per_os — what is honestly possible on each base OS.
+#
+# Columns:
+#   os         base system the distribution is built from
+#   arch       architectures that OS template supports (first is default)
+#   root_fs    filesystems usable as the root filesystem (first is default)
+#   installer  installer styles available for that OS (first is default)
+#   zfs_pool   "yes"        ZFS data pool supported (on top of any root fs)
+#              "data-only"  ZFS possible for data pools only, NOT as root
+#              "no"         no ZFS at all
+#
+# These rows are the source of truth. AGENTS.md prose mirrors them; keep both
+# in sync. See the honesty notes under per_os_honesty below.
+# ---------------------------------------------------------------------------
+per_os:
+  - { os: freebsd,   arch: [amd64, aarch64], root_fs: [zfs, ufs],     installer: [tui, gui], zfs_pool: yes }
+  - { os: netbsd,    arch: [amd64, aarch64], root_fs: [ffs],          installer: [tui],      zfs_pool: data-only }
+  - { os: openbsd,   arch: [amd64, aarch64], root_fs: [ffs],          installer: [tui],      zfs_pool: no }
+  - { os: dragonfly, arch: [amd64],          root_fs: [hammer2, ufs], installer: [tui],      zfs_pool: no }
+  - { os: illumos,   arch: [amd64],          root_fs: [zfs],          installer: [tui],      zfs_pool: yes }
+
+# Honest, user-facing feasibility notes per OS. When a user asks for
+# something a row forbids (classic case: "NetBSD with ZFS"), the agent quotes
+# the note, proposes the closest honest alternative, and re-asks. The agent
+# must never imply a combination is possible when a row says otherwise.
+per_os_honesty:
+  freebsd: "ZFS is first-class on FreeBSD: fully supported as the root filesystem and for data pools. UFS is the classic alternative."
+  netbsd: "ZFS pools work for data storage only; the root filesystem stays FFS. Root-on-ZFS is not supported."
+  openbsd: "No ZFS at all. FFS is the only filesystem choice."
+  dragonfly: "The native filesystem is HAMMER2 (UFS is also available). No ZFS."
+  illumos: "ZFS is native here: fully supported for the root filesystem and data pools."
+
+# How each base OS is built (build-tool facts for AGENTS.md and the build
+# templates). build.sh for NetBSD cross-builds from any POSIX host; OpenBSD
+# must be built on OpenBSD itself.
+per_os_build:
+  freebsd: "release(7) world and kernel plus a poudriere ports overlay; runs on a FreeBSD build host."
+  netbsd: "build.sh plus a pkgsrc (pbulk) package build; cross-builds from any POSIX host."
+  openbsd: "release(8) plus dpb over the OpenBSD ports tree; must build natively on OpenBSD."
+  dragonfly: "make buildworld / buildkernel plus nrelease with DPorts (dsynth) packages."
+  illumos: "illumos-gate plus an OmniOS-style distro builder with IPS (and pkgsrc for extras); needs a large bootstrap VM."
+
+# Where the per-question defaults come from when the user did not answer:
+# question-id -> per_os column name used with the row of DISTRO_OS.
+default_from_os:
+  DISTRO_ARCH: arch
+  FILESYSTEM_ROOT: root_fs
+  INSTALLER: installer
+
+# ---------------------------------------------------------------------------
+# questions — order here is the order keys appear in product.conf.
+# Each entry:
+#   id         answer key (answers.yaml) and product.conf key
+#   number     numbered question in AGENTS.md Phase 1 (Q1..Q10)
+#   prompt     short prompt the agent shows the user
+#   type       choice | string
+#   choices    allowed values when type is choice
+#   pattern    anchored ERE the string value must match (optional). Note:
+#              patterns avoid curly interval expressions (a{2,4}) because
+#              mawk and some other awks do not implement them; lengths are
+#              expressed with the min/max fields instead.
+#   default    fixed default (empty means: no fixed default)
+#   required_if  "KEY=choice" — only required when that condition is met
+#   notes      why the question exists / honesty the agent must pass on
+# ---------------------------------------------------------------------------
+questions:
+  - id: DISTRO_OS
+    number: 1
+    prompt: "Which base OS should the distribution be built from?"
+    type: choice
+    choices: [freebsd, netbsd, openbsd, dragonfly, illumos]
+    notes: "No default here: ask. The per_os table backs the answer with honest build facts."
+
+  - id: DISTRO_NAME
+    number: 2
+    prompt: "What is the distribution called — its human-facing name?"
+    type: string
+    pattern: "^[^[:cntrl:]]+$"
+    min: 1
+    max: 64
+    required: yes
+    notes: "ExampleBSD is the documentation placeholder. Example answer value: ExampleBSD."
+
+  - id: DISTRO_SLUG
+    number: 2
+    prompt: "And its slug — lowercase, digits, hyphens only, used for repos, files and identifiers?"
+    type: string
+    pattern: "^[a-z][a-z0-9-]*$"
+    min: 2
+    max: 32
+    required: yes
+    notes: "Example placeholder: examplebsd. Becomes <slug>, <slug>-ports, <slug>-installer, <slug>-ci repo names."
+
+  - id: DISTRO_ARCH
+    number: 3
+    prompt: "Which architecture should the release be built for?"
+    type: choice
+    choices: [amd64, aarch64]
+    notes: "Per-OS limits live in per_os rows: DragonFly and illumos are amd64 only. Default: first column of the OS row (amd64)."
+
+  - id: FILESYSTEM_ROOT
+    number: 4
+    prompt: "Which filesystem should the root volume use?"
+    type: choice
+    choices: [zfs, ufs, ffs, hammer2]
+    notes: "Constrained by the OS per_os row (root_fs column). Quote per_os_honesty before accepting an answer: a NetBSD root cannot be ZFS, and neither can an OpenBSD or a DragonFly root."
+
+  - id: ZFS_DATA_POOL
+    number: 4
+    prompt: "Should the distribution additionally ship a ZFS data pool?"
+    type: choice
+    choices: [yes, no]
+    default: no
+    notes: "Allowed only when the per_os row says zfs_pool: yes or data-only. On data-only OSes this is the honest way to give a user who asked for 'X with ZFS' what they actually want."
+
+  - id: ZFS_POOL_NAME
+    number: 4
+    prompt: "What should the ZFS data pool be called?"
+    type: string
+    pattern: "^[a-z][a-z0-9-]*$"
+    min: 1
+    max: 29
+    required_if: "ZFS_DATA_POOL=yes"
+    notes: "Only meaningful when ZFS_DATA_POOL=yes; otherwise omitted from product.conf. max 29 leaves room for template suffixes within the ZFS name budget. Example value: exampledata."
+
+  - id: PROFILE
+    number: 5
+    prompt: "Which build path: a desktop build, a headless server appliance, or both?"
+    type: choice
+    choices: [desktop, appliance, both]
+    default: appliance
+    notes: "Selects overlay/profiles/desktop and/or overlay/profiles/appliance on top of overlay/base. Jenkins builds and bhyve-tests each chosen path: desktop boots to a graphical greeter (VNC screenshot), appliance reaches a serial login prompt and accepts SSH."
+
+  - id: PACKAGE_SET
+    number: 6
+    prompt: "Which package set should the release install?"
+    type: choice
+    choices: [minimal, base-server, base-desktop, custom]
+    default: minimal
+    notes: "custom means: edit the pkg list in the product repo after forking; templates install minimal plus whatever the product repo adds."
+
+  - id: INSTALLER
+    number: 7
+    prompt: "Which installer should the release media use?"
+    type: choice
+    choices: [tui, gui]
+    notes: "TUI is available on every OS (bsddialog-style). GUI is worked out per-OS in installer-template; per_os rows list what is available."
+
+  - id: MOTD
+    number: 8
+    prompt: "One line that greets users on first login:"
+    type: string
+    pattern: "^[^[:cntrl:]]+$"
+    max: 120
+    default: "built from the wtfbsd templates"
+    notes: "The parser contract keeps the record separator, backslashes and control characters out of every value; see questions.yaml header."
+
+  - id: BRAND_COLOR
+    number: 8
+    prompt: "Brand accent color, as a six-digit hex like #RRGGBB?"
+    type: string
+    pattern: "^#[0-9a-fA-F]+$"
+    min: 7
+    max: 7
+    default: "#3b6ea5"
+    notes: "Public placeholder color for documentation; pick anything you own."
+
+  - id: BRAND_URL
+    number: 8
+    prompt: "Brand homepage URL?"
+    type: string
+    pattern: "^https://[A-Za-z0-9.-]+$"
+    max: 200
+    default: "https://wtfbsd.ai"
+    notes: "Shown in installer footers and on the release page. Must be https."
+
+  - id: CI_ENABLED
+    number: 9
+    prompt: "Should release builds run on Jenkins, in a throwaway bhyve build VM?"
+    type: choice
+    choices: [yes, no]
+    default: yes
+    notes: "Jenkins is the supported CI. With no, builds are run by hand with the build template and no release is auto-published."
+
+  - id: PUBLISH_METHOD
+    number: 10
+    prompt: "How should releases be published to the site: API or MCP?"
+    type: choice
+    choices: [api, mcp]
+    default: api
+    notes: "api = HTTPS release API on the publish target. mcp = the target's MCP publish tool. Either way the token comes from the user's own account settings and lives only as a Jenkins credential."
+
+  - id: PUBLISH_TARGET
+    number: 10
+    prompt: "Where do releases go?"
+    type: string
+    pattern: "^[a-z0-9][a-z0-9.-]+$"
+    min: 3
+    max: 64
+    default: "wtfbsd.ai"
+    notes: "Hostname only, no scheme. Default is the wtfbsd release site."
+
+  - id: PUBLISHER_ORG
+    number: 10
+    prompt: "Which GitHub org or account owns the forks?"
+    type: string
+    pattern: "^[A-Za-z0-9][A-Za-z0-9-]+$"
+    min: 2
+    max: 64
+    default: "wtfbsd"
+    notes: "Same value you pass to fork-distro.sh --org. You need permission to create repos there."

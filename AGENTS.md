@@ -19,6 +19,12 @@ Pipeline at a glance:
 5. **Phase 5 — Publish**: upload release metadata plus the SHA256 file to
    `PUBLISH_TARGET` with a token that never leaves Jenkins credentials.
 
+Beyond the first release (your own package repository, firmware, installer
+and hardware tests, signed releases, security updates and new upstream
+releases) follow the skill
+[`skills/make-your-own-distro/SKILL.md`](skills/make-your-own-distro/SKILL.md),
+which runs the whole lifecycle stage by stage with a check for each stage.
+
 ## 0. The contract: read questions.yaml first
 
 Read `questions.yaml` in this repository before anything else, every session. It
@@ -244,13 +250,18 @@ When Q10 is answered:
 With `product.conf` in hand:
 
 ```sh
-scripts/fork-distro.sh --org <PUBLISHER_ORG> --slug <DISTRO_SLUG>
+scripts/fork-distro.sh --os <DISTRO_OS> --name '<DISTRO_NAME>' \
+    --slug <DISTRO_SLUG> --org <PUBLISHER_ORG>          # dry run: prints the plan
+scripts/fork-distro.sh --os <DISTRO_OS> --name '<DISTRO_NAME>' \
+    --slug <DISTRO_SLUG> --org <PUBLISHER_ORG> --apply  # performs the forks
 ```
 
 - It forks the `<os>-template` matching `DISTRO_OS`, plus `installer-template`,
   `ports-templates` and `ci-templates`, into the `--org` account, renamed to
   `<slug>`, `<slug>-installer`, `<slug>-ports` and `<slug>-ci`.
-- It drops `product.conf` in so the Jenkinsfiles and build scripts can read it.
+- It does not clone the forks or copy `product.conf`: clone `<slug>` and put
+  `product.conf` at its top yourself, so `build.sh` and the Jenkinsfile can
+  read it.
 - Upstream source trees stay untouched (Ground rules); product-specific work
   from here on happens only in the fork — `overlay/base`,
   `overlay/profiles/desktop`, `overlay/profiles/appliance`, and, when
@@ -382,9 +393,9 @@ withCredentials([string(credentialsId: 'wtfbsd-ai-token', variable: 'WTFBSD_TOKE
 - [ ] Honesty held: `per_os`/`per_os_honesty` facts mirrored; impossible
       combinations (root-on-ZFS on NetBSD, any ZFS on OpenBSD or DragonFly)
       never offered, accepted or recorded.
-- [ ] Phase 2: `fork-distro.sh --org <PUBLISHER_ORG> --slug <DISTRO_SLUG>` ran;
+- [ ] Phase 2: `fork-distro.sh --os ... --name ... --slug ... --org ... --apply` ran;
       `<slug>`, `<slug>-installer`, `<slug>-ports`, `<slug>-ci` exist under the
-      org; `product.conf` dropped in; upstream trees untouched.
+      org; `product.conf` copied into the `<slug>` clone; upstream trees untouched.
 - [ ] Phase 3: Jenkins (or documented hand build) built base + overlay + packages
       for each chosen profile, inside a bhyve VM that was created and destroyed;
       ISO, raw/qcow2 image and SHA256 file produced.

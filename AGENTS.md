@@ -24,6 +24,13 @@ and hardware tests, signed releases, security updates and new upstream
 releases) follow the skill
 [`skills/make-your-own-distro/SKILL.md`](skills/make-your-own-distro/SKILL.md),
 which runs the whole lifecycle stage by stage with a check for each stage.
+Its stages match the wtfbsd/docs guide one to one: 1 fork and name,
+2 overlays and profiles, 3 packages, 4 build media, 5 CI, 6 release and
+publish, 7 operations, plus its own Stage 0 (prerequisites), which the
+guide does not have. Packages come before media: once the product has a
+package repository of its own, the media build installs from it. The
+self-hosted package check that Stage 3 runs is `scripts/ours-check.sh`;
+copy it, do not re-type it.
 
 ## 0. The contract: read questions.yaml first
 

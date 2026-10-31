@@ -9,6 +9,9 @@
 # Environment: requires awk and a POSIX sh (dash is used for the product.conf
 # sourcing checks when present; set POSIX_SH to override). Run from anywhere:
 #   tests/run-tests.sh            all checks
+#   OURS_CHECK=/path/to/copy tests/run-tests.sh
+#                                 run the ours-check cases against another
+#                                 copy of ours-check.sh (to prove them red)
 
 set -eu
 
@@ -16,6 +19,7 @@ progname=$(basename "$0")
 here=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 repo=$(dirname "$here")
 apply="$repo/scripts/apply-answers.sh"
+ours=${OURS_CHECK:-$repo/scripts/ours-check.sh}
 if [ -z "${POSIX_SH:-}" ]; then
     if command -v dash >/dev/null 2>&1; then POSIX_SH=dash; else POSIX_SH=sh; fi
 fi
@@ -242,6 +246,90 @@ done
 ( cd "$work" && "$apply" --check "$repo/examples/examplebsd-answers.yaml" ) >/dev/null 2>&1 && rc=0 || rc=$?
 if [ "$rc" -eq 0 ] && [ ! -s "$work/product.conf" ]; then ok "--check runs beside an existing product.conf"; else
     no "--check runs beside an existing product.conf" "rc=$rc"; fi
+
+# --- ours-check.sh: the self-hosted package check -------------------------
+fixture ours.list \
+    '# ours.list: every package the product repository publishes, and why' \
+    'examplebsd-artwork    product  wallpapers, logo, greeter theme' \
+    'examplebsd-desktop    meta     pulls the desktop from upstream' \
+    '' \
+    'examplebsd-firstboot  product  first-boot account helper'
+fixture published.txt 'examplebsd-artwork' 'examplebsd-desktop' 'examplebsd-firstboot'
+fixture published.nv 'examplebsd-artwork-1.0.20261031.1' 'examplebsd-desktop-1.0.20261031.1' \
+    'examplebsd-firstboot-1.0.20261031.1'
+fixture upstream.nv 'xorg-7.7_3' 'xfce-4.20' 'lightdm-1.32.0_6' 'firefox-140.0,2'
+
+Y sh "$ours" "$work/ours.list" "$work/published.txt"
+if [ "$rc" -eq 0 ] && grep -q 'pass (3 self-hosted' "$work/stdout"; then
+    ok "ours-check: a valid ours.list and published list pass (2-arg form)"
+else
+    no "ours-check: a valid ours.list and published list pass (2-arg form)" "rc=$rc: $(cat "$work/stdout")"
+fi
+
+Y sh "$ours" "$work/ours.list" "$work/published.txt" "$work/upstream.nv" "$work/published.nv"
+if [ "$rc" -eq 0 ] && grep -q 'pass (3 self-hosted' "$work/stdout"; then
+    ok "ours-check: nothing identical to upstream passes (4-arg form)"
+else
+    no "ours-check: nothing identical to upstream passes (4-arg form)" "rc=$rc: $(cat "$work/stdout")"
+fi
+
+# red: a published package that ours.list does not name
+cp "$work/published.txt" "$work/pub-extra.txt"
+printf '%s\n' 'xorg' >> "$work/pub-extra.txt"
+Y sh "$ours" "$work/ours.list" "$work/pub-extra.txt"
+if [ "$rc" -eq 1 ] && grep -q '^published but not in ours.list: xorg$' "$work/stdout"; then
+    ok "ours-check: a published package missing from ours.list fails"
+else
+    no "ours-check: a published package missing from ours.list fails" "rc=$rc: $(cat "$work/stdout")"
+fi
+
+# red: a line whose reason is not in the table, and a line with no note
+for line in 'examplebsd-artwork    easier   we wanted to' 'examplebsd-artwork    product'; do
+    { grep -v '^examplebsd-artwork' "$work/ours.list"; printf '%s\n' "$line"; } > "$work/ours-bad.list"
+    Y sh "$ours" "$work/ours-bad.list" "$work/published.txt"
+    if [ "$rc" -eq 1 ] && grep -q '^ours.list line without a valid reason and note (reason must be one of: product meta patched options missing): examplebsd-artwork$' "$work/stdout"; then
+        ok "ours-check: line '$line' fails"
+    else
+        no "ours-check: line '$line' fails" "rc=$rc: $(cat "$work/stdout")"
+    fi
+done
+
+# red: a published package identical in name and version to upstream's
+fixture ours-up.list 'examplebsd-artwork product wallpapers' 'lightdm patched fix not shipped yet'
+fixture pub-up.txt 'examplebsd-artwork' 'lightdm'
+fixture pub-up.nv 'examplebsd-artwork-1.0.20261031.1' 'lightdm-1.32.0_6'
+Y sh "$ours" "$work/ours-up.list" "$work/pub-up.txt" "$work/upstream.nv" "$work/pub-up.nv"
+if [ "$rc" -eq 1 ] && grep -q '^identical to upstream, take it from upstream: lightdm-1.32.0_6$' "$work/stdout"; then
+    ok "ours-check: a package identical to upstream fails"
+else
+    no "ours-check: a package identical to upstream fails" "rc=$rc: $(cat "$work/stdout")"
+fi
+
+# could not look: exit 2, never a pass
+: > "$work/empty"
+fixture comments-only '# nothing here' ''
+for entry in 'an empty published list|ours.list empty' \
+            'an empty ours.list|empty published.txt' \
+            'a comments-only ours.list|comments-only published.txt' \
+            'a missing published list|ours.list missing-file' \
+            'an empty upstream name-version list|ours.list published.txt empty published.nv' \
+            'an empty published name-version list|ours.list published.txt upstream.nv empty' \
+            'one argument|ours.list' \
+            'three arguments|ours.list published.txt upstream.nv'; do
+    label=${entry%%|*}
+    paths=
+    for a in ${entry#*|}; do paths="$paths $work/$a"; done
+    # shellcheck disable=SC2086
+    Y sh "$ours" $paths
+    if [ "$rc" -eq 2 ]; then ok "ours-check: $label is could-not-look (exit 2)"; else
+        no "ours-check: $label is could-not-look (exit 2)" "rc=$rc: $(cat "$work/stdout")"; fi
+done
+Y sh "$ours" "$work/ours.list" "$work/missing-file"
+if [ "$rc" -eq 2 ] && grep -q "^cannot read $work/missing-file: could not look " "$work/stdout"; then
+    ok "ours-check: a file it cannot read is named in the could-not-look message"
+else
+    no "ours-check: a file it cannot read is named in the could-not-look message" "rc=$rc: $(cat "$work/stdout")"
+fi
 
 printf '\n'
 printf '%d passed, %d failed\n' "$pass" "$fail"

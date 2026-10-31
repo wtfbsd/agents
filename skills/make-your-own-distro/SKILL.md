@@ -13,6 +13,14 @@ keep it current afterwards. The human guide with the reasoning behind
 every stage is `guide/` in wtfbsd/docs; `AGENTS.md` in this repository
 holds the Q&A rules. This skill is the procedure.
 
+Stages 1 to 7 here are the guide's stages 1 to 7, one to one: 1 fork
+and name, 2 overlays and profiles, 3 packages (guide `03-packages.md`
+and `03b-packages-per-os.md`), 4 build media, 5 CI, 6 release and
+publish, 7 operations. Stage 0 (prerequisites) is extra: it is this
+skill's own preflight and has no page in the guide. Packages come
+before media because the media build installs from the product
+repository.
+
 Placeholders: ExampleBSD, slug `examplebsd`, hosts under `example.org`,
 addresses from 192.0.2.0/24. Use the user's real values only in their
 own fork, never in the templates.
@@ -25,7 +33,7 @@ own fork, never in the templates.
    ports, DPorts). Adding a directory of your own ports next to them is
    fine.
 2. **Upstream packages first.** Every package comes from the upstream
-   binary repository unless `ours.list` gives it a reason (Stage 4). The
+   binary repository unless `ours.list` gives it a reason (Stage 3). The
    product repository holds only those packages.
 3. **Layer order**: upstream, baseline overlay, product overlay, packages.
    A product layer only adds.
@@ -57,7 +65,7 @@ stage's check passed.
 
 ---
 
-## Stage 0: preflight
+## Stage 0: prerequisites (this skill only; not a guide stage)
 
 **Inputs:** a clone of wtfbsd/agents; network access to GitHub.
 
@@ -65,7 +73,8 @@ stage's check passed.
 
 1. Read `questions.yaml` and `AGENTS.md` in full.
 2. Run the repository's own tests: `tests/run-tests.sh`.
-3. Note which templates exist and their state: `wtfbsd/<os>-template`,
+3. Check that `scripts/ours-check.sh` exists (Stage 3 copies it).
+4. Note which templates exist and their state: `wtfbsd/<os>-template`,
    `installer-template`, `ports-templates`, `ci-templates`. Today
    `ports-templates` and `ci-templates` are placeholders; the Jenkinsfile
    ships in each OS template.
@@ -75,7 +84,11 @@ stage's check passed.
 **On failure:** stop; report the failing test. Do not work around a broken
 contract.
 
-## Stage 1: questions and product.conf
+## Stage 1: fork and name
+
+Guide: `01-fork-and-name.md`. Two parts, in order.
+
+### 1a: questions and product.conf
 
 **Inputs:** the user's answers.
 
@@ -99,7 +112,7 @@ as `KEY='value'`.
 question; never edit `product.conf` by hand. Exit 2 is a usage error in
 your command.
 
-## Stage 2: fork
+### 1b: fork
 
 **Inputs:** `product.conf`; `gh` logged in with rights on `PUBLISHER_ORG`.
 
@@ -130,7 +143,9 @@ host).
 some forks; ask the user before deleting anything. "gh is not
 authenticated": ask the user to run `gh auth login`.
 
-## Stage 3: overlays and profiles
+## Stage 2: overlays and profiles
+
+Guide: `02-overlays-and-profiles.md`.
 
 **Inputs:** the clone; what the user wants on the system.
 
@@ -162,7 +177,12 @@ expected files; `git diff --stat` touches only `overlay/`, package lists,
 the value with a placeholder. A placeholder left unsubstituted means a
 file name or key typo.
 
-## Stage 4: decide upstream or ours, per package
+## Stage 3: packages
+
+Guide: `03-packages.md` (policy and the self-hosted check) and
+`03b-packages-per-os.md` (commands). Two parts, in order.
+
+### 3a: decide upstream or ours, per package
 
 **Inputs:** the package lists; the user's customisations.
 
@@ -178,49 +198,16 @@ file name or key typo.
    `name reason note`. Name new packages `<slug>-<thing>`.
 4. Prefer `product` and `meta` packages: no compiled code, no ABI
    breakage when upstream moves.
-5. Install this check as `<slug>-ports/tests/ours-check.sh`:
-
-```sh
-#!/bin/sh
-# Copyright (c) 2026 The wtfbsd contributors. BSD-2-Clause (see LICENSE).
-# ours-check.sh OURS_LIST PUBLISHED [UPSTREAM_NV PUBLISHED_NV]
-#   OURS_LIST     lines "name reason note...", reason one of
-#                 product meta patched options missing
-#   PUBLISHED     package names in the product repository, one per line
-#   UPSTREAM_NV   optional: name-version lines of the upstream repository
-#   PUBLISHED_NV  optional: name-version lines of the product repository
-# exit 0 pass, 1 fail, 2 could not look
-set -eu
-[ $# -eq 2 ] || [ $# -eq 4 ] || { echo "usage: $0 OURS_LIST PUBLISHED [UPSTREAM_NV PUBLISHED_NV]" >&2; exit 2; }
-for f in "$@"; do [ -f "$f" ] && [ -r "$f" ] || { echo "cannot read $f: could not look"; exit 2; }; done
-tmp=$(mktemp -d) || exit 2
-trap 'rm -rf "$tmp"' EXIT
-st=0
-awk -v bad="$tmp/bad" '!/^[[:space:]]*#/ && NF {
-        if (NF < 3 || $2 !~ /^(product|meta|patched|options|missing)$/)
-            print $1 > bad
-        print $1
-     }' "$1" | sort -u > "$tmp/listed"
-if [ -s "$tmp/bad" ]; then
-    sed 's/^/ours.list line without a valid reason and note: /' "$tmp/bad"; st=1
-fi
-sort -u "$2" > "$tmp/published"
-[ -s "$tmp/published" ] || { echo "no published package names read: could not look"; exit 2; }
-comm -23 "$tmp/published" "$tmp/listed" > "$tmp/extra"
-if [ -s "$tmp/extra" ]; then
-    sed 's/^/published but not in ours.list: /' "$tmp/extra"; st=1
-fi
-if [ $# -eq 4 ]; then
-    sort -u "$3" > "$tmp/up"; sort -u "$4" > "$tmp/pubnv"
-    [ -s "$tmp/up" ] || { echo "no upstream name-versions read: could not look"; exit 2; }
-    comm -12 "$tmp/up" "$tmp/pubnv" > "$tmp/same"
-    if [ -s "$tmp/same" ]; then
-        sed 's/^/identical to upstream, take it from upstream: /' "$tmp/same"; st=1
-    fi
-fi
-[ "$st" -eq 0 ] && echo "ours-check: pass ($(wc -l < "$tmp/published" | tr -d ' ') self-hosted packages, each with a reason)"
-exit "$st"
-```
+5. Copy the check from this repository into the ports fork:
+   `cp scripts/ours-check.sh <slug>-ports/tests/ours-check.sh`. Usage:
+   `ours-check.sh OURS_LIST PUBLISHED [UPSTREAM_NV PUBLISHED_NV]`. It
+   fails (exit 1) when a published package is not in `ours.list`, when a
+   line has no valid reason and note, or, with the four-argument form,
+   when a published name-version is identical to upstream's; it exits 2
+   ("could not look") on a usage error, an unreadable file or an input
+   with nothing in it. Read the script before running it; never
+   re-type it from memory. `tests/run-tests.sh` here proves each of
+   those outcomes, red and green.
 
    Feed it on FreeBSD or DragonFly (repository names as in the client
    files; on FreeBSD 16 upstream is `FreeBSD-ports` plus
@@ -230,7 +217,8 @@ exit "$st"
 pkg update -f
 pkg rquery -a -r ExampleBSD '%n' > published.txt
 pkg rquery -a -r ExampleBSD '%n-%v' > published.nv
-pkg rquery -a -r FreeBSD-ports -r FreeBSD-ports-kmods '%n-%v' > upstream.nv
+pkg rquery -a -r FreeBSD-ports '%n-%v' > upstream.nv
+pkg rquery -a -r FreeBSD-ports-kmods '%n-%v' >> upstream.nv
 sh tests/ours-check.sh ours.list published.txt upstream.nv published.nv
 ```
 
@@ -244,10 +232,10 @@ sh tests/ours-check.sh ours.list published.txt upstream.nv published.nv
 **On failure:** for each "published but not in ours.list", either give it
 a reason or stop publishing it. For "identical to upstream", delete it
 from the product repository. "Could not look" means the query returned
-nothing: check the repository URL and signature (Stage 5), never treat it
+nothing: check the repository URL and signature (3b), never treat it
 as a pass.
 
-## Stage 5: build, sign and serve the product repository
+### 3b: build, sign and serve the product repository
 
 **Inputs:** `ours.list`; a signing host the user controls; a static HTTPS
 host (`https://pkg.example.org/`).
@@ -325,7 +313,7 @@ host (`https://pkg.example.org/`).
 `pkg update -f` shows no "no trusted public keys" message;
 `pkg rquery -r ExampleBSD '%n-%v'` lists exactly this run's packages
 (count them: an empty repository can exit 0); `pkg install -n
-<slug>-desktop` resolves dependencies from upstream; Stage 4's
+<slug>-desktop` resolves dependencies from upstream; 3a's
 `ours-check.sh` exits 0.
 
 **On failure:** an empty repository with exit 0 is a signing mismatch
@@ -334,7 +322,10 @@ client file to match the signing mode. "Wrong OS version" means packages
 built for a newer base than the client: rebuild in a jail of the client's
 release. Never copy the private key to the builder to make CI green.
 
-## Stage 6: build media with all firmware
+## Stage 4: build media with all firmware
+
+Guide: `04-build-media.md`. Needs Stage 3: the package step installs
+from upstream plus the product repository.
 
 **Inputs:** the fork; a build host per the template (FreeBSD on FreeBSD;
 NetBSD base and image on any POSIX host, its package step on NetBSD
@@ -384,7 +375,9 @@ artifacts. Start re-runs from an empty `-o` directory (`mkimg` will not
 overwrite). DragonFly cannot cross-build, and the OpenBSD media step needs OpenBSD:
 use a native VM.
 
-## Stage 7: CI
+## Stage 5: CI
+
+Guide: `05-ci.md`.
 
 **Inputs:** a Jenkins controller the user runs; an agent labelled
 `bsd-builder` (FreeBSD with bhyve) or a provider script of their own.
@@ -406,7 +399,7 @@ use a native VM.
    installed system); a real-hardware stage on an agent label that owns
    test machines (GPU driver loaded, firmware found, Wi-Fi interface
    present, greeter on screen).
-4. Chain jobs: a green package build always publishes (Stage 5), and the
+4. Chain jobs: a green package build always publishes (Stage 3), and the
    publish triggers the media job.
 
 **Check:** a push triggers a build with no click; a deliberately broken
@@ -421,7 +414,9 @@ not stop bhyve: use `timeout -k 10 N` and `bhyvectl --destroy --vm=NAME`.
 A green bulk with your package skipped is a failure: check the built
 list.
 
-## Stage 8: release and publish
+## Stage 6: release and publish
+
+Guide: `06-release-and-publish.md`.
 
 **Inputs:** a green media run (build, boot, installer, hardware stages).
 
@@ -461,14 +456,17 @@ in it returns the listed size and checksum; the site shows the release.
 generator or the upload. A 200 with the wrong length is a missing file
 behind a fallback page.
 
-## Stage 9: operations (repeat)
+## Stage 7: operations (repeat)
+
+Guide: `07-operations.md`.
 
 **Inputs:** upstream security advisories and release announcements.
 
 **Do:**
 
 1. Per advisory: does it hit a package in `ours.list` or on the media?
-   Rebuild and publish (Stage 5), which triggers new media (Stage 6-8).
+   Rebuild and publish (Stage 3), which triggers new media (Stages 4
+   to 6).
    Upstream packages reach users through upstream; OpenBSD base patches
    through `syspatch(8)`.
 2. Per new upstream release: new builder next to the old one; point the

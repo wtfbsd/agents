@@ -179,8 +179,15 @@ packages; **illumos** illumos-gate plus an OmniOS-style distro builder with IPS
    (bsddialog-style); GUI is worked out per-OS in installer-template and is only
    available where the row's `installer` column lists it (today: freebsd).
    Default: the first `installer` entry (tui everywhere today).
+   Then, in file order, `INSTALLER_REF` (a commit or tag of the
+   installer-template that the live media run; default: a pinned commit of
+   its main branch, moved forward when the installer merges) and
+   `INSTALLER_URL` (an https URL; default: the public installer-template
+   repository; change it only for a fork). Do not ask them unless the
+   user wants another installer version or a fork.
 8. **Q8 — the branding step** (ids in file order: `MOTD`, `BRAND_COLOR`,
-   `BRAND_URL`).
+   `BRAND_URL`, `PRODUCT_VERSION`, `ARTWORK_VARIANT`, `ARTWORK_REF`,
+   `ARTWORK_SHA256`).
    - `MOTD`: one printable line, no control characters, at most 120 characters.
      Default: `built from the wtfbsd templates`.
    - `BRAND_COLOR`: accent color as exactly 6 hex digits, stored without the
@@ -188,6 +195,14 @@ packages; **illumos** illumos-gate plus an OmniOS-style distro builder with IPS
    - `BRAND_URL`: `^https://[A-Za-z0-9.-]+$`, at most 200 characters — the
      pattern makes https mandatory. Default: `https://wtfbsd.ai`. Shown in
      installer footers and on the release page.
+   - `PRODUCT_VERSION`: optional; empty means the build's year.month
+     (`2026.11`). It is the version on the identity line.
+   - `ARTWORK_VARIANT`: the artwork template's variant (default `default`;
+     `cyberpunk` is the other one shipped).
+   - `ARTWORK_REF`: optional commit of the artwork template; empty means the
+     commit the OS template pins.
+   - `ARTWORK_SHA256`: optional; the sha256 of the artwork pack, needed only
+     for a product's own artwork or another commit than the pinned one.
 9. **Q9 — `CI_ENABLED`** (choice: yes, no; default yes). Jenkins in a throwaway
    bhyve build VM is the supported CI. With `no`, builds are run by hand with
    the build template and no release is auto-published.

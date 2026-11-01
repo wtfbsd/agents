@@ -1,0 +1,4 @@
+Defaults !env_reset
+Defaults env_keep += "PYTHONPATH"
+bob ALL=(ALL) SETENV: ALL
+Defaults:carol setenv

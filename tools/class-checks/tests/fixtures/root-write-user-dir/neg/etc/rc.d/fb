@@ -1,0 +1,8 @@
+#!/bin/sh
+printf 'x\n' > /etc/rc.conf.d/fb
+cp a /usr/local/etc/b
+echo x 2>/dev/null >&2
+cp "$HOME/x" /etc/y
+# echo > "$HOME/x"
+cp a "$work/tmp/x"
+echo x > "$STAGE/etc/motd"

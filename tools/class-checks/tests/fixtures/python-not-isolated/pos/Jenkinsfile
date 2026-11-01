@@ -1,0 +1,3 @@
+pipeline {
+  stages { stage('b') { steps { sh 'python3 build.py' } } }
+}

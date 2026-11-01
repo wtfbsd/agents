@@ -1,0 +1,3 @@
+#!/bin/sh
+cat > /tmp/answers <<A
+A

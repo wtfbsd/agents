@@ -137,12 +137,11 @@ fixture live1.yaml \
 Y "$apply" "$work/live1.yaml" -o "$work/live1.conf"
 if [ "$rc" -eq 0 ] && grep -qx "PRODUCT_VERSION=''" "$work/live1.conf" && grep -qx "ARTWORK_REF=''" "$work/live1.conf" &&
    grep -qx "ARTWORK_VARIANT='default'" "$work/live1.conf" &&
-   grep -qx "INSTALLER_REF='$(awk '/^  - id: INSTALLER_REF$/{f=1} f&&/^    default:/{gsub(/^    default: "|"$/,"");print;exit}' "$repo/questions.yaml")'" "$work/live1.conf" &&
-   grep -qx "INSTALLER_REF='[0-9a-f]\{40\}'" "$work/live1.conf" &&
+   grep -qx "INSTALLER_REF=''" "$work/live1.conf" &&
    grep -qx "INSTALLER_URL='https://github.com/wtfbsd/installer-template.git'" "$work/live1.conf"; then
-    ok "unanswered optional keys stay empty; INSTALLER_REF/URL and ARTWORK_VARIANT get defaults"
+    ok "unanswered optional keys (INSTALLER_REF too) stay empty; INSTALLER_URL and ARTWORK_VARIANT get defaults"
 else
-    no "unanswered optional keys stay empty; INSTALLER_REF/URL and ARTWORK_VARIANT get defaults" "rc=$rc $(cat "$work/stderr")"
+    no "unanswered optional keys (INSTALLER_REF too) stay empty; INSTALLER_URL and ARTWORK_VARIANT get defaults" "rc=$rc $(cat "$work/stderr")"
 fi
 fixture live2.yaml \
     'DISTRO_OS: freebsd' 'DISTRO_NAME: ExampleBSD' 'DISTRO_SLUG: examplebsd' \
@@ -156,16 +155,18 @@ fi
 fixture live5.yaml \
     'DISTRO_OS: freebsd' 'DISTRO_NAME: ExampleBSD' 'DISTRO_SLUG: examplebsd' \
     'ARTWORK_REF: 353ef29aa000eda6c1f274774170a7a691768490' \
-    'ARTWORK_SHA256: 10f2507cd0bb325534157f073d79bc08da6a5e1ded34686ebe683a75a0a1d3e4'
+    'ARTWORK_SHA256: 10f2507cd0bb325534157f073d79bc08da6a5e1ded34686ebe683a75a0a1d3e4' \
+    'INSTALLER_REF: ceda104c69eb9aa21e9336244e7e76fd24ed3dec'
 Y "$apply" --check "$work/live5.yaml"
 rc_check=$rc
 Y "$apply" "$work/live5.yaml" -o "$work/live5.conf"
 if [ "$rc_check" -eq 0 ] && [ "$rc" -eq 0 ] &&
    grep -qx "ARTWORK_REF='353ef29aa000eda6c1f274774170a7a691768490'" "$work/live5.conf" &&
-   grep -qx "ARTWORK_SHA256='10f2507cd0bb325534157f073d79bc08da6a5e1ded34686ebe683a75a0a1d3e4'" "$work/live5.conf"; then
-    ok "ARTWORK_REF and ARTWORK_SHA256 answers pass --check and reach product.conf"
+   grep -qx "ARTWORK_SHA256='10f2507cd0bb325534157f073d79bc08da6a5e1ded34686ebe683a75a0a1d3e4'" "$work/live5.conf" &&
+   grep -qx "INSTALLER_REF='ceda104c69eb9aa21e9336244e7e76fd24ed3dec'" "$work/live5.conf"; then
+    ok "ARTWORK_REF, ARTWORK_SHA256 and INSTALLER_REF answers pass --check and reach product.conf"
 else
-    no "ARTWORK_REF and ARTWORK_SHA256 answers pass --check and reach product.conf" "check rc=$rc_check, apply rc=$rc $(cat "$work/stderr")" "$(grep -E '^ARTWORK_(REF|SHA256)=' "$work/live5.conf" 2>/dev/null)"
+    no "ARTWORK_REF, ARTWORK_SHA256 and INSTALLER_REF answers pass --check and reach product.conf" "check rc=$rc_check, apply rc=$rc $(cat "$work/stderr")" "$(grep -E '^(ARTWORK_(REF|SHA256)|INSTALLER_REF)=' "$work/live5.conf" 2>/dev/null)"
 fi
 fixture live3.yaml \
     'DISTRO_OS: freebsd' 'DISTRO_NAME: ExampleBSD' 'DISTRO_SLUG: examplebsd' \

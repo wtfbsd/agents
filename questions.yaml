@@ -94,6 +94,8 @@ default_from_os:
 #              expressed with the min/max fields instead.
 #   default    fixed default (empty means: no fixed default)
 #   required_if  "KEY=choice" — only required when that condition is met
+#   optional   yes: no answer and no default leaves the key empty (the
+#              templates read an empty value as "not set")
 #   notes      why the question exists / honesty the agent must pass on
 # ---------------------------------------------------------------------------
 questions:
@@ -180,6 +182,24 @@ questions:
     choices: [tui, gui]
     notes: "TUI is available on every OS (bsddialog-style). GUI is worked out per-OS in installer-template; per_os rows list what is available."
 
+  - id: INSTALLER_REF
+    number: 7
+    prompt: "Which commit or tag of the installer-template should the live media carry?"
+    type: string
+    pattern: "^[A-Za-z0-9_][A-Za-z0-9._/-]*$"
+    max: 64
+    default: "ceda104c69eb9aa21e9336244e7e76fd24ed3dec"
+    notes: "Pins the graphical and text installer (the live desktop media run its install-into-stage.sh). Default: a pinned commit of wtfbsd/installer-template main, moved forward by a reviewed change when the installer merges. A commit or tag is reproducible; a branch name is not."
+
+  - id: INSTALLER_URL
+    number: 7
+    prompt: "Where is the installer-template repository? (an https URL)"
+    type: string
+    pattern: "^https://[A-Za-z0-9._~/:@%+-]+$"
+    max: 200
+    default: "https://github.com/wtfbsd/installer-template.git"
+    notes: "Change it only for a fork of the installer-template. https only."
+
   - id: MOTD
     number: 8
     prompt: "One line that greets users on first login:"
@@ -207,6 +227,43 @@ questions:
     max: 200
     default: "https://wtfbsd.ai"
     notes: "Shown in installer footers and on the release page. Must be https."
+
+  - id: PRODUCT_VERSION
+    number: 8
+    prompt: "Product version shown on the identity line (empty: the build's year.month, e.g. 2026.11)?"
+    type: string
+    pattern: "^[0-9A-Za-z][0-9A-Za-z.+-]*$"
+    max: 32
+    optional: yes
+    notes: "Feeds VERSION in /usr/local/share/<slug>/identity and the identity line of the installer, greeter and desktop."
+
+  - id: ARTWORK_VARIANT
+    number: 8
+    prompt: "Which artwork variant: the default one or another the artwork template ships (e.g. cyberpunk)?"
+    type: string
+    pattern: "^[a-z][a-z0-9-]*$"
+    max: 32
+    default: default
+    notes: "A named variant of the artwork template (palette plus art). The template build fails when the pinned artwork pack has no such variant."
+
+  - id: ARTWORK_REF
+    number: 8
+    prompt: "Which commit of the artwork template (empty: the templates' pinned default)?"
+    type: string
+    pattern: "^[A-Za-z0-9_][A-Za-z0-9._/-]*$"
+    max: 64
+    optional: yes
+    notes: "Pins the artwork pack (branding/spots.tsv and the rendered art). Empty means the commit the OS template pins itself."
+
+  - id: ARTWORK_SHA256
+    number: 8
+    prompt: "The sha256 of the artwork pack (only for your own artwork or another commit)?"
+    type: string
+    pattern: "^[0-9a-f]+$"
+    min: 64
+    max: 64
+    optional: yes
+    notes: "The OS templates pin the sha256 of the packs of the template's own product; a fork with its own artwork gives the sha256 of its pack (the .sha256 file pack.sh writes). The build refuses a pack whose sha256 differs."
 
   - id: CI_ENABLED
     number: 9

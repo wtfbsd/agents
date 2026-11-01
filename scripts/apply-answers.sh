@@ -508,6 +508,12 @@ resolve_all() {
             elif [ -n "$qdefault" ]; then
                 val=$qdefault
                 src="fixed default"
+            elif [ "$(qf "$n" optional)" = yes ]; then
+                # an optional key stays empty: the templates read an empty
+                # value as "not set" (questions.yaml: optional: yes)
+                eval "VAL_${qid}=''"
+                eval "VERB_${qid}=\"optional, not set\""
+                continue
             else
                 die "$qid has no answer and no default — ask the user (AGENTS.md Q$qnumber)"
             fi

@@ -131,6 +131,55 @@ else
     no "FILESYSTEM_ROOT defaults to zfs on freebsd" "rc=$rc, stdout: $(head -8 "$work/stdout")"
 fi
 
+# --- the keys of the live desktop media (installer, identity, artwork) ----
+fixture live1.yaml \
+    'DISTRO_OS: freebsd' 'DISTRO_NAME: ExampleBSD' 'DISTRO_SLUG: examplebsd'
+Y "$apply" "$work/live1.yaml" -o "$work/live1.conf"
+if [ "$rc" -eq 0 ] && grep -qx "PRODUCT_VERSION=''" "$work/live1.conf" && grep -qx "ARTWORK_REF=''" "$work/live1.conf" &&
+   grep -qx "ARTWORK_VARIANT='default'" "$work/live1.conf" &&
+   grep -qx "INSTALLER_REF='$(awk '/^  - id: INSTALLER_REF$/{f=1} f&&/^    default:/{gsub(/^    default: "|"$/,"");print;exit}' "$repo/questions.yaml")'" "$work/live1.conf" &&
+   grep -qx "INSTALLER_REF='[0-9a-f]\{40\}'" "$work/live1.conf" &&
+   grep -qx "INSTALLER_URL='https://github.com/wtfbsd/installer-template.git'" "$work/live1.conf"; then
+    ok "unanswered optional keys stay empty; INSTALLER_REF/URL and ARTWORK_VARIANT get defaults"
+else
+    no "unanswered optional keys stay empty; INSTALLER_REF/URL and ARTWORK_VARIANT get defaults" "rc=$rc $(cat "$work/stderr")"
+fi
+fixture live2.yaml \
+    'DISTRO_OS: freebsd' 'DISTRO_NAME: ExampleBSD' 'DISTRO_SLUG: examplebsd' \
+    'PRODUCT_VERSION: 1.0' 'ARTWORK_VARIANT: cyberpunk'
+Y "$apply" "$work/live2.yaml" -o "$work/live2.conf"
+if [ "$rc" -eq 0 ] && grep -qx "PRODUCT_VERSION='1.0'" "$work/live2.conf" && grep -qx "ARTWORK_VARIANT='cyberpunk'" "$work/live2.conf"; then
+    ok "PRODUCT_VERSION and ARTWORK_VARIANT answers reach product.conf"
+else
+    no "PRODUCT_VERSION and ARTWORK_VARIANT answers reach product.conf" "rc=$rc $(cat "$work/stderr")" "$(grep -E '^(PRODUCT_VERSION|ARTWORK_VARIANT)=' "$work/live2.conf" 2>/dev/null)"
+fi
+fixture live5.yaml \
+    'DISTRO_OS: freebsd' 'DISTRO_NAME: ExampleBSD' 'DISTRO_SLUG: examplebsd' \
+    'ARTWORK_REF: 353ef29aa000eda6c1f274774170a7a691768490' \
+    'ARTWORK_SHA256: 10f2507cd0bb325534157f073d79bc08da6a5e1ded34686ebe683a75a0a1d3e4'
+Y "$apply" --check "$work/live5.yaml"
+rc_check=$rc
+Y "$apply" "$work/live5.yaml" -o "$work/live5.conf"
+if [ "$rc_check" -eq 0 ] && [ "$rc" -eq 0 ] &&
+   grep -qx "ARTWORK_REF='353ef29aa000eda6c1f274774170a7a691768490'" "$work/live5.conf" &&
+   grep -qx "ARTWORK_SHA256='10f2507cd0bb325534157f073d79bc08da6a5e1ded34686ebe683a75a0a1d3e4'" "$work/live5.conf"; then
+    ok "ARTWORK_REF and ARTWORK_SHA256 answers pass --check and reach product.conf"
+else
+    no "ARTWORK_REF and ARTWORK_SHA256 answers pass --check and reach product.conf" "check rc=$rc_check, apply rc=$rc $(cat "$work/stderr")" "$(grep -E '^ARTWORK_(REF|SHA256)=' "$work/live5.conf" 2>/dev/null)"
+fi
+fixture live3.yaml \
+    'DISTRO_OS: freebsd' 'DISTRO_NAME: ExampleBSD' 'DISTRO_SLUG: examplebsd' \
+    'PRODUCT_VERSION: -1'
+Y "$apply" --check "$work/live3.yaml"
+if [ "$rc" -ne 0 ] && grep -q "PRODUCT_VERSION value.*required format" "$work/stderr"; then ok "an answered optional key is still checked (PRODUCT_VERSION -1 refused)"; else
+    no "an answered optional key is still checked (PRODUCT_VERSION -1 refused)" "rc=$rc $(cat "$work/stderr")"
+fi
+fixture live4.yaml \
+    'DISTRO_OS: freebsd' 'DISTRO_NAME: ExampleBSD' 'DISTRO_SLUG: examplebsd' \
+    'INSTALLER_URL: http://example.org/x.git'
+Y "$apply" --check "$work/live4.yaml"
+if [ "$rc" -ne 0 ] && grep -q "INSTALLER_URL value.*required format" "$work/stderr"; then ok "INSTALLER_URL must be https"; else no "INSTALLER_URL must be https" "rc=$rc $(cat "$work/stderr")"; fi
+
 # --- honesty: forbidden combinations must be refused ----------------------
 fixture bad1.yaml \
     'DISTRO_OS: netbsd' 'DISTRO_NAME: ExampleBSD' 'DISTRO_SLUG: examplebsd' \

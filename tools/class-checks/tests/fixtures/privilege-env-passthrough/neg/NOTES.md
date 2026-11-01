@@ -1,0 +1,1 @@
+- `etc/doas.conf` holds `permit nopass live as root cmd /usr/libexec/x`, with no keepenv and no setenv.

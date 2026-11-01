@@ -1,0 +1,10 @@
+etc/doas.conf:1
+etc/doas.conf:2
+etc/sudoers:1
+etc/sudoers:2
+etc/sudoers:3
+etc/sudoers:4
+scripts/s.sh:2
+scripts/s.sh:3
+scripts/s.sh:4
+docs/guide.md:3

@@ -1,0 +1,4 @@
+jobs:
+  t:
+    steps:
+      - run: python3 -m pytest

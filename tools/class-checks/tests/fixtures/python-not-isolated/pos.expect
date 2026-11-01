@@ -1,0 +1,11 @@
+scripts/a.sh:2
+scripts/a.sh:3
+scripts/a.sh:4
+scripts/a.sh:5
+scripts/a.sh:6
+scripts/a.sh:7
+sbin/helper:1
+product-install:1
+Jenkinsfile:2
+.github/workflows/ci.yml:4
+scripts/a.sh:9

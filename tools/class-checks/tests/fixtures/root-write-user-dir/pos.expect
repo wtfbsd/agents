@@ -1,0 +1,10 @@
+etc/rc.d/fb:2
+etc/rc.d/fb:3
+etc/rc.d/fb:4
+etc/rc.d/fb:5
+etc/rc.d/fb:6
+usr/local/sbin/foo-tool:2
+thing-install:2
+etc/rc.d/fb:8
+etc/rc.d/fb:10
+etc/rc.d/fb:11

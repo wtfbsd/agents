@@ -1,0 +1,10 @@
+#!/bin/sh
+# PROVIDE: svc
+. /etc/rc.subr
+name=svc
+rcvar=svc_enable
+start_cmd=svc_start
+stop_cmd=:
+svc_start() { echo start; }
+load_rc_config "$name"
+run_rc_command "$1"

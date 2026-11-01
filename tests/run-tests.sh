@@ -331,6 +331,15 @@ else
     no "ours-check: a file it cannot read is named in the could-not-look message" "rc=$rc: $(cat "$work/stdout")"
 fi
 
+# --- tools/class-checks: its own tests (positive and negative fixture per
+# class, the allow-list, and the tool passing its own checks). The repo-wide
+# gate, sh tools/class-checks/run.sh ., is added here once this repo's own
+# hits from the first sweep are fixed.
+Y sh "$repo/tools/class-checks/tests/run-tests.sh"
+if [ "$rc" -eq 0 ]; then ok "class-checks: its own tests pass"; else
+    no "class-checks: its own tests pass" "$(grep '^FAIL' "$work/stdout")"
+fi
+
 printf '\n'
 printf '%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

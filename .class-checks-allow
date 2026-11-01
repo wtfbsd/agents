@@ -1,0 +1,4 @@
+# tools/class-checks allow-list: CLASS PATH:LINE REASON (see tools/class-checks/README.md)
+* tools/class-checks/tests/fixtures/*:* deliberate positive and negative fixtures for the class checks
+privilege-env-passthrough tools/class-checks/README.md:42 the class table names the sudo flags it flags; documentation, not a rule
+pipe-to-shell tools/class-checks/README.md:47 the class table names the pattern it flags; documentation, not a command

@@ -1,0 +1,11 @@
+#!/bin/sh
+printf 'x\n' > "$HOME/.profile"
+echo hi >> /tmp/fb.log
+cp /usr/share/skel/dot.xinitrc "${user_home}/.xinitrc"
+install -m 600 key "$TMPDIR/key"
+cat x | tee -a ~/.cshrc
+mkdir -p "$_home/.config" \
+	&& cp "$src" "$_home/.config/autostart/" \
+	&& chown -R "$_u" "$_home/.config"
+cp "$R$AUTOSTART" "$R$_home/.config/autostart/x.desktop"
+( : > "$R/home/.live-write-test" )

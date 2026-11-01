@@ -1,0 +1,3 @@
+Defaults env_reset
+Defaults env_keep += "LANG LC_ALL"
+Defaults secure_path="/sbin:/bin:/usr/sbin:/usr/bin"

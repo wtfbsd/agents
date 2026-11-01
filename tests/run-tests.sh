@@ -247,6 +247,61 @@ done
 if [ "$rc" -eq 0 ] && [ ! -s "$work/product.conf" ]; then ok "--check runs beside an existing product.conf"; else
     no "--check runs beside an existing product.conf" "rc=$rc"; fi
 
+# --- pattern_ok matches the pattern of the contract as written ------------
+# The pattern reaches awk through ENVIRON, never through -v: awk -v rewrites
+# the backslash escapes of a value, so \. (a literal dot) would become . (any
+# character). The contract parser refuses a backslash in a value today, so
+# the function is driven directly, with the contract lookups stubbed.
+awk '/^pattern_ok\(\) \{/,/^\}/' "$apply" > "$work/pattern_ok.sh"
+pattern_probe() { # pattern_probe <regex> <value> — the status of pattern_ok
+    (
+        qindex_for() { printf '1'; }
+        qf() { printf '%s' "$probe_re"; }
+        probe_re=$1
+        . "$work/pattern_ok.sh"
+        pattern_ok PROBE "$2"
+    ) 2>/dev/null
+}
+probe='^[a-z][a-z0-9_-]*\.[a-z]+$'
+if [ -s "$work/pattern_ok.sh" ] && pattern_probe "$probe" 'name.org'; then
+    ok "pattern_ok: a value that matches a pattern with \\. is accepted"
+else
+    no "pattern_ok: a value that matches a pattern with \\. is accepted"
+fi
+if [ -s "$work/pattern_ok.sh" ] && ! pattern_probe "$probe" 'namexorg'; then
+    ok "pattern_ok: \\. in a pattern is a literal dot, not any character"
+else
+    no "pattern_ok: \\. in a pattern is a literal dot, not any character" \
+        "awk -v turned the pattern $probe into one where . matches any character"
+fi
+
+# --- a question id is a plain name: it names variables set through eval ----
+sed 's/^  - id: MOTD$/  - id: MOTD;:>PWNED;:/' "$repo/questions.yaml" > "$work/badid-questions.yaml"
+grep -v '^MOTD:' "$repo/examples/examplebsd-answers.yaml" > "$work/badid-answers.yaml"
+rc=0
+(cd "$work" && "$apply" -q "$work/badid-questions.yaml" --check "$work/badid-answers.yaml") \
+    >"$work/stdout" 2>"$work/stderr" || rc=$?
+if [ "$rc" -eq 3 ] && grep -q "bad question id 'MOTD;:>PWNED;:'" "$work/stderr" && [ ! -e "$work/PWNED" ]; then
+    ok "a question id that is not a plain name is refused"
+else
+    no "a question id that is not a plain name is refused" "rc=$rc: $(cat "$work/stderr")"
+fi
+# a default_from_os column is a plain name too (the real ones, arch,
+# root_fs and installer, resolve in the cases above); one that is not is
+# refused before it reaches eval: the contract parser already refuses a
+# value that is not a per_os column, and plain_name_or_die is the guard at
+# the eval itself
+sed 's/^  DISTRO_ARCH: arch$/  DISTRO_ARCH: ar$(:>PWNED)ch/' "$repo/questions.yaml" > "$work/badcol-questions.yaml"
+grep -v '^DISTRO_ARCH:' "$repo/examples/examplebsd-answers.yaml" > "$work/badcol-answers.yaml"
+rc=0
+(cd "$work" && "$apply" -q "$work/badcol-questions.yaml" --check "$work/badcol-answers.yaml") \
+    >"$work/stdout" 2>"$work/stderr" || rc=$?
+if [ "$rc" -eq 3 ] && grep -qF 'ar$(:>PWNED)ch' "$work/stderr" && [ ! -e "$work/PWNED" ]; then
+    ok "a default_from_os column that is not a plain name is refused"
+else
+    no "a default_from_os column that is not a plain name is refused" "rc=$rc: $(cat "$work/stderr")"
+fi
+
 # --- ours-check.sh: the self-hosted package check -------------------------
 fixture ours.list \
     '# ours.list: every package the product repository publishes, and why' \

@@ -264,7 +264,9 @@ chmod 600 "$unread/x.sh"
 self=$work/self
 mkdir -p "$self/tools"
 cp -R "$cc" "$self/tools/class-checks"
-cp "$agents/.class-checks-allow" "$self/.class-checks-allow"
+# only the entries for this tree: entries for the rest of agents (e.g.
+# scripts/) would be stale in a copy that holds tools/class-checks alone
+grep -E '^(#|[^ ]+ tools/class-checks/)' "$agents/.class-checks-allow" > "$self/.class-checks-allow"
 Y sh "$run" "$self"
 if [ "$rc" -eq 0 ] && ! grep -q stale "$work/err"; then
     ok "run.sh: tools/class-checks passes its own checks, with no stale allow entries"

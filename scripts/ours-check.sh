@@ -33,14 +33,14 @@ USAGE
 for f in "$@"; do
     [ -f "$f" ] && [ -r "$f" ] || { echo "cannot read $f: could not look (pass a readable file; see the usage in the header)"; exit 2; }
 done
-tmp=$(mktemp -d) || exit 2
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/ours-check.XXXXXXXX") || exit 2
 trap 'rm -rf "$tmp"' EXIT
 
 # non-blank, non-comment first fields of a file, sorted and unique
 names() { awk '!/^[[:space:]]*#/ && NF { print $1 }' "$1" | sort -u; }
 
 st=0
-awk -v bad="$tmp/bad" '!/^[[:space:]]*#/ && NF {
+bad="$tmp/bad" awk 'BEGIN { bad = ENVIRON["bad"] } !/^[[:space:]]*#/ && NF {
         if (NF < 3 || $2 !~ /^(product|meta|patched|options|missing)$/)
             print $1 > bad
         print $1

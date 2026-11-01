@@ -2,3 +2,23 @@
 * tools/class-checks/tests/fixtures/*:* deliberate positive and negative fixtures for the class checks
 privilege-env-passthrough tools/class-checks/README.md:42 the class table names the sudo flags it flags; documentation, not a rule
 pipe-to-shell tools/class-checks/README.md:47 the class table names the pattern it flags; documentation, not a command
+eval-nonliteral scripts/apply-answers.sh:332 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:339 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:342 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:348 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:361 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:365 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:377 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:398 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:399 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:400 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:401 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:402 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:403 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:404 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:405 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:485 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:486 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:550 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:551 the variable name is checked to be a plain name before eval and the value is escaped
+eval-nonliteral scripts/apply-answers.sh:610 the variable name is checked to be a plain name before eval and the value is escaped

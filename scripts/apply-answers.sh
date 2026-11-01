@@ -62,6 +62,17 @@ warn() {
     printf '%s: warning: %s\n' "$progname" "$1"
 }
 
+# plain_name_or_die VALUE CONTEXT — VALUE becomes part of a variable name
+# that is set or read through eval (Q_, VAL_, VERB_, ROW_ ...), so it must
+# be a plain shell name: ^[A-Za-z_][A-Za-z0-9_]*$, one rule for every such
+# value of questions.yaml
+plain_name_or_die() {
+    case $1 in
+        '' | [0-9]* | *[!A-Za-z0-9_]*)
+            die "questions.yaml: bad $2 '$1' (it must be a plain name: letters, digits, _, not starting with a digit)" ;;
+    esac
+}
+
 # --------------------------------------------------------------- arguments
 self_dir=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 questions_file=$self_dir/../questions.yaml
@@ -313,7 +324,8 @@ while IFS="$tab" read -r kind path value; do
             idx=${path%%.*}; field=${path#*.}
             case $idx in *[!0-9]*) die "internal: bad question index" ;; esac
             case $field in
-                id) NQ=$idx
+                id) plain_name_or_die "$value" "question id"
+                    NQ=$idx
                     QIDS="$QIDS $value" ;;
                 *[!A-Za-z0-9_]*) die "internal: bad question field '$field'" ;;
             esac
@@ -405,7 +417,10 @@ pattern_ok() {
         return 0
     fi
     pval=$2
-    awk -v v="$pval" -v re="$pre" 'BEGIN { if (v !~ re) exit 2 }'
+    # through the environment, not -v: awk -v rewrites the backslash
+    # escapes of a value (\. becomes ., \\ becomes \), so the pattern
+    # that is matched would not be the pattern of the contract
+    pq_v="$pval" pq_re="$pre" awk 'BEGIN { if (ENVIRON["pq_v"] !~ ENVIRON["pq_re"]) exit 2 }'
 }
 
 qindex_for() {
@@ -457,6 +472,7 @@ resolve_all() {
             case $qreqif in *=*) : ;; *) die "internal: bad required_if on $qid" ;; esac
             gk=${qreqif%%=*}
             gv=${qreqif#*=}
+            plain_name_or_die "$gk" "required_if key of $qid"
             if ! have_val "$gk"; then
                 die "internal: required_if on $qid refers to unknown key $gk"
             fi
@@ -485,6 +501,7 @@ resolve_all() {
             # the per_os row (default_from_os) wins over a fixed default
             col=$(dfo_col "$qid")
             if [ -n "$col" ]; then
+                plain_name_or_die "$col" "default_from_os column of $qid"
                 colval=$(row_val "$ROWN" "$col")
                 val=${colval%%|*}
                 src="first of the $DISTRO_OS per_os row ($col: $(listsp "$colval"))"

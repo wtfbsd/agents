@@ -180,8 +180,9 @@ packages; **illumos** illumos-gate plus an OmniOS-style distro builder with IPS
    available where the row's `installer` column lists it (today: freebsd).
    Default: the first `installer` entry (tui everywhere today).
    Then, in file order, `INSTALLER_REF` (a commit or tag of the
-   installer-template that the live media run; default: a pinned commit of
-   its main branch, moved forward when the installer merges) and
+   installer-template that the live media run; default: empty, so the
+   commit pinned in the OS template's build.sh, in the user's fork, is
+   used) and
    `INSTALLER_URL` (an https URL; default: the public installer-template
    repository; change it only for a fork). Do not ask them unless the
    user wants another installer version or a fork.

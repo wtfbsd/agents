@@ -188,8 +188,8 @@ questions:
     type: string
     pattern: "^[A-Za-z0-9_][A-Za-z0-9._/-]*$"
     max: 64
-    default: "ceda104c69eb9aa21e9336244e7e76fd24ed3dec"
-    notes: "Pins the graphical and text installer (the live desktop media run its install-into-stage.sh). Default: a pinned commit of wtfbsd/installer-template main, moved forward by a reviewed change when the installer merges. A commit or tag is reproducible; a branch name is not."
+    optional: yes
+    notes: "Pins the graphical and text installer (the live desktop media run its install-into-stage.sh). Empty (the default): the commit pinned in the OS template's build.sh (in your fork, so it moves only with a change you review). Set it only to hold a product on one installer version. A commit or tag is reproducible; a branch name is not."
 
   - id: INSTALLER_URL
     number: 7
